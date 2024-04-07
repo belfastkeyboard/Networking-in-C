@@ -1,5 +1,5 @@
-#ifndef STATUS
-#define STATUS 1
+#ifndef NETWORKING_STATUS
+#define NETWORKING_STATUS 1
 
 #include <stdio.h>
 
