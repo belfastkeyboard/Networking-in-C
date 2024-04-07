@@ -14,7 +14,8 @@ void PrintWSAErrorMessage(int error)
                 NULL);
     if (result != 0)
     {
-        printf("[i] Error code: %d.\n[i] Error message: %s", error, error_message);
+        warn("Error code: %d.", error);
+        warn("Error message: %s.", error_message);
     }
 }
 
@@ -33,6 +34,7 @@ STATUS NetworkWSAInitialisation(WSADATA* wsa_data)
     }
     else
     {
+        warn("Can't initialise WSA.", 0);
         PrintWSAErrorMessage(result);
         return result;
     }
@@ -49,6 +51,7 @@ STATUS NetworkWSACleanup(void)
     }
     else
     {
+        warn("Failed WSA cleanup.", 0);
         error = WSAGetLastError();
         PrintWSAErrorMessage(error);
         return result;
@@ -57,12 +60,15 @@ STATUS NetworkWSACleanup(void)
 
 STATUS NetworkCreateSocket(SOCKET* sockfd, int af, int type, int protocol)
 {
+    int error;
+
     *sockfd = socket(af, type, protocol);
 
     if (*sockfd == INVALID_SOCKET)
     {
         warn("Socket creation failed!", 0);
-        PrintWSAErrorMessage(WSAGetLastError());
+        error = WSAGetLastError();
+        PrintWSAErrorMessage(error);
         return EXIT_FAILURE;
     }
     else
@@ -82,6 +88,7 @@ STATUS NetworkCloseSocket(SOCKET sockfd)
     }
     else
     {
+        warn("Failed to close socket %d.", sockfd);
         error = WSAGetLastError();
         PrintWSAErrorMessage(error);
         return result;
@@ -123,6 +130,23 @@ STATUS NetworkListenSocket(SOCKET sockfd, int backlog)
         return result;
     }
 }
+STATUS NetworkConnect(SOCKET sockfd, struct sockaddr_in* addr)
+{
+    int result, error;
+
+    result = connect(sockfd, (const struct sockaddr*)addr, sizeof(*addr));
+
+    if (result == SOCKET_ERROR)
+    {
+        error = WSAGetLastError();
+        PrintWSAErrorMessage(error);
+        return result;
+    }
+    else
+    {
+        return result;
+    }
+}
 STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* recv)
 {
     int client_len, error;
@@ -160,12 +184,6 @@ STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* r
 
     return EXIT_SUCCESS;
 }
-
-STATUS NetworkConnect(SOCKET sockfd, struct sockaddr_in* addr)
-{
-    connect(sockfd, (const struct sockaddr*)addr, sizeof(*addr));
-}
-
 STATUS NetworkServerReceive(SOCKET sockfd)
 {
     char buffer[BUFFER_LEN];
