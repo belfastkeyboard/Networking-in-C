@@ -162,6 +162,38 @@ STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* r
     return EXIT_SUCCESS;
 }
 
+STATUS NetworkServerReceive(SOCKET sockfd)
+{
+    char buffer[BUFFER_LEN];
+
+    int bytes_rcvd, bytes_sent, error;
+
+    memset(buffer, 0, BUFFER_LEN);
+
+    bytes_rcvd = recv(sockfd, buffer, BUFFER_LEN, RECV_FLAG);
+
+    if (bytes_rcvd == SOCKET_ERROR)
+    {
+        warn("Error in recv(). Exiting.", 0);
+        return EXIT_FAILURE;
+    }
+    else if (bytes_rcvd == 0)
+    {
+        info("Client disconnected!", 0);
+        return EXIT_FAILURE;
+    }
+    else
+    {
+        // send message back to the client - think echo command
+        bytes_sent = send(sockfd, buffer, bytes_rcvd + 1, SEND_FLAG);
+        if (bytes_sent == SOCKET_ERROR)
+        {
+            error = WSAGetLastError();
+            PrintWSAErrorMessage(error);
+        }
+    }
+}
+
 void NetworkConstructSockaddr_in(struct sockaddr_in* addr, short fam, u_short port, u_long S_addr)
 {
     memset(addr, 0, sizeof(*addr));

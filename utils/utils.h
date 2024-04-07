@@ -11,6 +11,8 @@
 #define PORT 54000
 #define BUFFER_LEN 4096
 #define WSA_SUCCESS 0
+#define RECV_FLAG 0
+#define SEND_FLAG RECV_FLAG
 
 typedef int STATUS;
 
@@ -24,6 +26,8 @@ STATUS NetworkCloseSocket(SOCKET sockfd);
 STATUS NetworkBindSocket(SOCKET sockfd, struct sockaddr_in* addr, int addrlen);
 STATUS NetworkListenSocket(SOCKET sockfd, int backlog);
 STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* recv);
+
+STATUS NetworkServerReceive(SOCKET sockfd);
 
 void NetworkConstructSockaddr_in(struct sockaddr_in* addr, short fam, u_short port, u_long S_addr);
 
