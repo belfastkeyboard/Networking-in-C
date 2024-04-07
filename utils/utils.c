@@ -175,7 +175,7 @@ STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* r
         len = NI_MAXHOST;
 
         WSAAddressToStringA((struct sockaddr*)&addr, sizeof(addr), NULL, host, &len);
-        info("%s connected on port %s", host, ntohs(addr->sin_port));
+        info("%s connected on port %hu", host, ntohs(addr->sin_port));
     }
     else
     {
