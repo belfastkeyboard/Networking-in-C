@@ -186,12 +186,16 @@ STATUS NetworkServerReceive(SOCKET sockfd)
     {
         // send message back to the client - think echo command
         bytes_sent = send(sockfd, buffer, bytes_rcvd + 1, SEND_FLAG);
+
         if (bytes_sent == SOCKET_ERROR)
         {
             error = WSAGetLastError();
             PrintWSAErrorMessage(error);
+            return EXIT_FAILURE;
         }
     }
+
+    return EXIT_SUCCESS;
 }
 
 void NetworkConstructSockaddr_in(struct sockaddr_in* addr, short fam, u_short port, u_long S_addr)
