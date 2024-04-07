@@ -6,13 +6,14 @@
 // FD_SET - add to set
 // FD_ZERO - clear to zero
 
-int main()
+int main(void)
 {
+    WSADATA data;
     SOCKET sock_listening, sock_client;
     struct sockaddr_in addr, addr_client;
 
     // Begin winsock
-    if (NetworkWSAInitialisation())
+    if (NetworkWSAInitialisation(&data))
         return EXIT_FAILURE;
 
     // Create socket

@@ -18,15 +18,14 @@ void PrintWSAErrorMessage(int error)
     }
 }
 
-STATUS NetworkWSAInitialisation(void)
+STATUS NetworkWSAInitialisation(WSADATA* wsa_data)
 {
-    WSADATA wsa_data;
     WORD ver;
     int result;
     
     ver = MAKEWORD(2, 2);
 
-    result = WSAStartup(ver, &wsa_data);
+    result = WSAStartup(ver, wsa_data);
 
     if (result == WSA_SUCCESS)
     {

@@ -18,7 +18,7 @@ typedef int STATUS;
 
 void PrintWSAErrorMessage(int error);
 
-STATUS NetworkWSAInitialisation(void);
+STATUS NetworkWSAInitialisation(WSADATA* wsa_data);
 STATUS NetworkWSACleanup(void);
 
 STATUS NetworkCreateSocket(SOCKET* sockfd, int af, int type, int protocol);
