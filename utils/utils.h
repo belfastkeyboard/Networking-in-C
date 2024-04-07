@@ -23,9 +23,10 @@ STATUS NetworkWSACleanup(void);
 
 STATUS NetworkCreateSocket(SOCKET* sockfd, int af, int type, int protocol);
 STATUS NetworkCloseSocket(SOCKET sockfd);
-STATUS NetworkBindSocket(SOCKET sockfd, struct sockaddr_in* addr, int addrlen);
+STATUS NetworkBindSocket(SOCKET sockfd, struct sockaddr_in* addr);
 STATUS NetworkListenSocket(SOCKET sockfd, int backlog);
 STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* recv);
+STATUS NetworkConnect();
 
 STATUS NetworkServerReceive(SOCKET sockfd);
 

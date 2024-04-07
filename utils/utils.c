@@ -88,11 +88,11 @@ STATUS NetworkCloseSocket(SOCKET sockfd)
     }
 }
 
-STATUS NetworkBindSocket(SOCKET sockfd, struct sockaddr_in* addr, int addrlen)
+STATUS NetworkBindSocket(SOCKET sockfd, struct sockaddr_in* addr)
 {
     int result, error;
 
-    result = bind(sockfd, (const struct sockaddr*)addr, addrlen);
+    result = bind(sockfd, (const struct sockaddr*)addr, sizeof(*addr));
 
     if (result == WSA_SUCCESS)
     {
@@ -159,6 +159,11 @@ STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* r
     }
 
     return EXIT_SUCCESS;
+}
+
+STATUS NetworkConnect(SOCKET sockfd, struct sockaddr_in* addr)
+{
+    connect(sockfd, (const struct sockaddr*)addr, sizeof(*addr));
 }
 
 STATUS NetworkServerReceive(SOCKET sockfd)
