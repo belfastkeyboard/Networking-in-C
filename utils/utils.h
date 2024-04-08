@@ -6,16 +6,22 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include "status.h"
 
 #define PORT 54000
+#define LOCALHOST "127.0.0.1"
+
 #define ZERO 0
 #define BUFFER_LEN 4096
+#define SERVER_SHUTDOWN_ERROR 10054
 
 #define WSA_SUCCESS ZERO
 #define RECV_FLAG ZERO
 #define SEND_FLAG RECV_FLAG
+
+#define DEPRECATED ZERO
 
 #define THREAD_MEM_SIZE ZERO
 #define THREAD_START_NO_DELAY ZERO
@@ -24,6 +30,12 @@
 #define THREAD_WAIT_FOR_ALL TRUE
 
 typedef int STATUS;
+
+typedef struct ThreadArgs
+{
+    SOCKET sockfd;
+    bool* exit;
+} ThreadArgs;
 
 void PrintWSAErrorMessage(int error);
 
@@ -40,10 +52,11 @@ STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* r
 STATUS NetworkServerReceive(SOCKET sockfd);
 STATUS NetworkClientSend(SOCKET sockfd);
 
-DWORD WINAPI NetworkThreadClientSend(LPVOID lpParam);
-DWORD WINAPI NetworkThreadClientReceive(LPVOID lpParam);
+STATUS NetworkMultiServerReceive(SOCKET sock_serv);
 
 // threaded functions
+DWORD WINAPI NetworkThreadClientSend(LPVOID lpParam);
+DWORD WINAPI NetworkThreadClientReceive(LPVOID lpParam);
 STATUS NetworkClientSendReceive(SOCKET sockfd);
 
 void NetworkConstructSockaddr_in(struct sockaddr_in* addr, short fam, u_short port, u_long S_addr);

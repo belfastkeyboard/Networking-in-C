@@ -237,7 +237,6 @@ STATUS NetworkServerReceive(SOCKET sockfd)
 
     return EXIT_SUCCESS;
 }
-
 STATUS NetworkClientSend(SOCKET sockfd)
 {
     char buffer[BUFFER_LEN];
@@ -264,7 +263,7 @@ STATUS NetworkClientSend(SOCKET sockfd)
             {
                 error = WSAGetLastError();
 
-                if (error == 10054)
+                if (error == SERVER_SHUTDOWN_ERROR)
                 {
                     warn("Connection with server lost.", 0);
                 }
@@ -308,15 +307,116 @@ STATUS NetworkClientSend(SOCKET sockfd)
 
     return EXIT_SUCCESS;
 }
+STATUS NetworkMultiServerReceive(SOCKET sock_serv)
+{
+    fd_set master;
+
+    FD_ZERO(&master);
+    FD_SET(sock_serv, &master);
+
+    while (TRUE)
+    {
+        int socket_count;
+        fd_set worker;
+        SOCKET sockfd;
+        time_t current_time;
+        struct tm *local_time;
+
+        worker = master;
+
+        printf("Connections: %d.\n", master.fd_count);
+
+        socket_count = select(DEPRECATED, &worker, NULL, NULL, NULL); // timeout ?
+
+        for (int i = 0; i < socket_count; i++)
+        {
+            sockfd = worker.fd_array[i];
+
+            if (sockfd == sock_serv)
+            {
+                info("Incoming connection.", 0);
+                
+                SOCKET client;
+                char welcome[22];
+                
+                // accept new connection
+                client = accept(sock_serv, NULL, NULL);
+
+                info("New user accepted.", 0);
+
+                // add connection to list of connected clients
+                FD_SET(client, &master);
+
+                // send welcome message to client
+                strcpy(welcome, "Welcome to the chat!\n");
+                send(client, welcome, 22, SEND_FLAG);
+
+                // broadcast message to other clients welcoming new user
+                for (int j = 0; j < master.fd_count; j++)
+                {
+                    SOCKET user; 
+                    char welcome[24];
+
+                    user = master.fd_array[j];
+                    strcpy(welcome, "A new user has joined!\n");
+
+                    if (user == client || user == sock_serv)
+                        continue;
+
+                    send(user, welcome, 24, SEND_FLAG);
+                }
+            }
+            else
+            {
+                info("Incoming message.", 0);
+
+                char buffer[BUFFER_LEN];
+                int bytes_rcvd;
+
+                memset(buffer, 0, BUFFER_LEN);
+
+                bytes_rcvd = recv(sockfd, buffer, BUFFER_LEN, RECV_FLAG);
+
+                time(&current_time);
+                local_time = localtime(&current_time);
+
+                if (bytes_rcvd <= 0)
+                {
+                    info("Client '%d' disconnected.", sockfd);
+                    closesocket(sockfd); // error handling later
+                    FD_CLR(sockfd, &master);
+                }
+                else
+                {
+                    SOCKET user;
+
+                    printf("[%02d:%02d:%02d] Message: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
+
+                    for (int i = 0; i < master.fd_count; i++)
+                    {
+                        user = master.fd_array[i];
+
+                        if (user == sockfd || user == sock_serv)
+                            continue;
+
+                        send(user, buffer, bytes_rcvd, SEND_FLAG);
+                    }
+                }
+            }
+        }
+    }
+}
 
 DWORD WINAPI NetworkThreadClientSend(LPVOID lpParam)
 {
     SOCKET sockfd;
+    ThreadArgs* args;
     char* user_input;
     size_t len, size;
     int bytes_sent, error;
 
-    sockfd = *(SOCKET*)lpParam;
+    args = (ThreadArgs*)lpParam;
+    sockfd = args->sockfd;
 
     // Do-while loop to send-receive data
     do {
@@ -336,6 +436,8 @@ DWORD WINAPI NetworkThreadClientSend(LPVOID lpParam)
                 warn("Error sending.", 0);
                 error = WSAGetLastError();
                 PrintWSAErrorMessage(error);
+                
+                *args->exit = TRUE;
                 return EXIT_FAILURE;
             }
         }
@@ -343,17 +445,20 @@ DWORD WINAPI NetworkThreadClientSend(LPVOID lpParam)
         free(user_input);
     } while (len - 1 > 1);
 
+    *args->exit = TRUE;
     return EXIT_SUCCESS;
 }
 DWORD WINAPI NetworkThreadClientReceive(LPVOID lpParam)
 {
+    ThreadArgs* args;
     SOCKET sockfd;
     char buffer[BUFFER_LEN];
-    int bytes_rcvd;
+    int bytes_rcvd, error;
     time_t current_time;
     struct tm *local_time;
 
-    sockfd = *(SOCKET*)lpParam;
+    args = (ThreadArgs*)lpParam;
+    sockfd = args->sockfd;
 
     while (TRUE)
     {
@@ -364,14 +469,30 @@ DWORD WINAPI NetworkThreadClientReceive(LPVOID lpParam)
         time(&current_time);
         local_time = localtime(&current_time);
 
-        if (bytes_rcvd == SOCKET_ERROR)
+        if (bytes_rcvd <= SOCKET_ERROR)
         {
-            warn("Error in recv(). Exiting.", 0);
+            error = WSAGetLastError();
+
+            if (error == SERVER_SHUTDOWN_ERROR)
+            {
+                info("Connection with server lost.", 0);
+
+                *args->exit = TRUE;
+                return EXIT_SUCCESS;
+            }
+            else
+            {
+                warn("Error in recv(). Exiting.", 0);
+                PrintWSAErrorMessage(error);
+            }
+
+            *args->exit = TRUE;
             return EXIT_FAILURE;
         }
         else if (bytes_rcvd == 0)
         {
             info("Server disconnected?", 0);
+            *args->exit = TRUE;
             return EXIT_SUCCESS;
         }
         else
@@ -380,18 +501,27 @@ DWORD WINAPI NetworkThreadClientReceive(LPVOID lpParam)
         }
     }
 
+    *args->exit = TRUE;
     return EXIT_SUCCESS;
 }
 
 STATUS NetworkClientSendReceive(SOCKET sockfd)
 {
-    HANDLE HANDLES[2];
     HANDLE sendHANDLE, receiveHANDLE;
     LPVOID sendARGS, receiveARGS;
     DWORD sendID, receiveID;
+    ThreadArgs threadArgsSend, threadArgsReceive;
+    bool exit;
 
-    sendARGS = (LPVOID)&sockfd;
-    receiveARGS = (LPVOID)&sockfd;
+    exit = false;
+    threadArgsSend.sockfd = sockfd;
+    threadArgsSend.exit = &exit;
+    
+    threadArgsReceive.sockfd = sockfd;
+    threadArgsReceive.exit = &exit;
+
+    sendARGS = (LPVOID)&threadArgsSend;
+    receiveARGS = (LPVOID)&threadArgsReceive;
 
     sendHANDLE = CreateThread(THREAD_NO_SECURITY_ATTRS, THREAD_MEM_SIZE, NetworkThreadClientSend, sendARGS, THREAD_START_NO_DELAY, &sendID);
 
@@ -400,10 +530,6 @@ STATUS NetworkClientSendReceive(SOCKET sockfd)
         warn("Thread '%lu' creation failed!", sendID);
         return EXIT_FAILURE;
     }
-    // else
-    // {
-    //     good("Thread '%lu' created!", sendID);
-    // }
 
     receiveHANDLE = CreateThread(THREAD_NO_SECURITY_ATTRS, THREAD_MEM_SIZE, NetworkThreadClientReceive, receiveARGS, THREAD_START_NO_DELAY, &receiveID);
 
@@ -412,14 +538,15 @@ STATUS NetworkClientSendReceive(SOCKET sockfd)
         warn("Thread '%lu' creation failed!", receiveID);
         return EXIT_FAILURE;
     }
-    // else
-    // {
-    //     good("Thread '%lu' created!", receiveID);
-    // }
 
-    HANDLES[0] = sendHANDLE;
-    HANDLES[1] = receiveHANDLE;
-    WaitForMultipleObjects(2, HANDLES, THREAD_WAIT_FOR_ALL, INFINITE);
+    while (exit == FALSE)
+    {
+        Sleep(500);
+    }
+
+    // currently threads are not gracefully exited upon server shutdown
+    // due to blocking nature of getline in NetworkThreadClientSend()
+    // threads are closed with program exit
 
     return EXIT_SUCCESS;
 }
