@@ -5,6 +5,7 @@
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <time.h>
 
 #include "status.h"
 
@@ -25,10 +26,11 @@ STATUS NetworkCreateSocket(SOCKET* sockfd, int af, int type, int protocol);
 STATUS NetworkCloseSocket(SOCKET sockfd);
 STATUS NetworkBindSocket(SOCKET sockfd, struct sockaddr_in* addr);
 STATUS NetworkListenSocket(SOCKET sockfd, int backlog);
+STATUS NetworkConnect(SOCKET sockfd, struct sockaddr_in* addr);
 STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* recv);
-STATUS NetworkConnect();
 
 STATUS NetworkServerReceive(SOCKET sockfd);
+STATUS NetworkSend();
 
 void NetworkConstructSockaddr_in(struct sockaddr_in* addr, short fam, u_short port, u_long S_addr);
 

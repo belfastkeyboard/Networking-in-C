@@ -1,3 +1,5 @@
+#define DEBUG_MODE
+
 #include "utils/utils.h"
 
 // select()
@@ -8,6 +10,9 @@
 
 int main(void)
 {
+    warn("Test!", 0);
+    return 0;
+
     WSADATA data;
     SOCKET sock_listening, sock_client;
     struct sockaddr_in addr, addr_client;
@@ -22,7 +27,7 @@ int main(void)
 
     // Bind socket to IP addr and port
     NetworkConstructSockaddr_in(&addr, AF_INET, PORT, INADDR_ANY);
-    if (NetworkBindSocket(sock_listening, &addr, sizeof(addr)))
+    if (NetworkBindSocket(sock_listening, &addr))
         return EXIT_FAILURE;
 
     // Tell winsock the socket is listening
@@ -38,6 +43,7 @@ int main(void)
         return EXIT_FAILURE;
 
     // While loop: accept and echo message back to client
+
     while (TRUE) 
     {
         if (NetworkServerReceive(sock_client))

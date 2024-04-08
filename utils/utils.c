@@ -171,7 +171,9 @@ STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* r
 
     if (getnameinfo((const struct sockaddr*)&addr, sizeof(addr), host, NI_MAXHOST, service, NI_MAXSERV, 0))
     {
-
+        if (!strlen(host))
+            strcpy(host, "Unknown");
+            
         len = NI_MAXHOST;
 
         WSAAddressToStringA((struct sockaddr*)&addr, sizeof(addr), NULL, host, &len);
@@ -187,12 +189,18 @@ STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* r
 STATUS NetworkServerReceive(SOCKET sockfd)
 {
     char buffer[BUFFER_LEN];
-
     int bytes_rcvd, bytes_sent, error;
+    time_t current_time;
+    struct tm *local_time;
 
     memset(buffer, 0, BUFFER_LEN);
 
     bytes_rcvd = recv(sockfd, buffer, BUFFER_LEN, RECV_FLAG);
+    
+    time(&current_time);
+    local_time = localtime(&current_time);
+
+    printf("[%02d:%02d:%02d] Message received: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
 
     if (bytes_rcvd == SOCKET_ERROR)
     {
@@ -209,11 +217,18 @@ STATUS NetworkServerReceive(SOCKET sockfd)
         // send message back to the client - think echo command
         bytes_sent = send(sockfd, buffer, bytes_rcvd + 1, SEND_FLAG);
 
+        time(&current_time);
+        local_time = localtime(&current_time);
+
         if (bytes_sent == SOCKET_ERROR)
         {
             error = WSAGetLastError();
             PrintWSAErrorMessage(error);
             return EXIT_FAILURE;
+        }
+        else
+        {
+            printf("[%02d:%02d:%02d] Message sent: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
         }
     }
 
