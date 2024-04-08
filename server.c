@@ -2,12 +2,6 @@
 
 #include "utils/utils.h"
 
-// select()
-
-// FD_CLR - remove from set
-// FD_SET - add to set
-// FD_ZERO - clear to zero
-
 int main(void)
 {
     WSADATA data;
