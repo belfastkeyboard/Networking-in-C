@@ -9,7 +9,7 @@
 
 #include "status.h"
 
-#define PORT 54000
+#define PORT 80 // 54000
 #define BUFFER_LEN 4096
 #define WSA_SUCCESS 0
 #define RECV_FLAG 0
