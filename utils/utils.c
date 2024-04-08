@@ -15,7 +15,7 @@ void PrintWSAErrorMessage(int error)
     if (result != 0)
     {
         warn("Error code: %d.", error);
-        warn("Error message: %s.", error_message);
+        warn("Error message: %s", error_message);
     }
 }
 
@@ -231,6 +231,77 @@ STATUS NetworkServerReceive(SOCKET sockfd)
             printf("[%02d:%02d:%02d] Message sent: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
         }
     }
+
+    return EXIT_SUCCESS;
+}
+
+STATUS NetworkClientSend(SOCKET sockfd)
+{
+    char buffer[BUFFER_LEN];
+    char* user_input;
+    size_t len, size;
+    int bytes_sent, bytes_rcvd, error;
+    time_t current_time;
+    struct tm *local_time;
+
+    // Do-while loop to send-receive data
+    do {
+        user_input = NULL;
+        size = 0;
+        len = 0;
+        
+        printf("> ");
+        len = getline(&user_input, &size, stdin);
+
+        if (len - 1 > 0)
+        {
+            bytes_sent = send(sockfd, user_input, len, SEND_FLAG);
+
+            if (bytes_sent == SOCKET_ERROR)
+            {
+                error = WSAGetLastError();
+
+                if (error == 10054)
+                {
+                    warn("Connection with server lost.", 0);
+                }
+                else
+                {
+                    warn("Error sending.", 0);
+                    PrintWSAErrorMessage(error);
+                }
+
+                return EXIT_FAILURE;
+            }
+            else
+            {
+                memset(buffer, 0, BUFFER_LEN);
+                bytes_rcvd = recv(sockfd, buffer, BUFFER_LEN, RECV_FLAG);
+
+                time(&current_time);
+                local_time = localtime(&current_time);
+
+                if (bytes_rcvd == SOCKET_ERROR)
+                {
+                    warn("Error receiving.", 0);
+                    error = WSAGetLastError();
+                    PrintWSAErrorMessage(error);
+                    return EXIT_FAILURE;
+                }
+                else if (bytes_rcvd == 0)
+                {
+                    info("Connection closed.", 0);
+                    return EXIT_SUCCESS;
+                }
+                else
+                {
+                    printf("[%02d:%02d:%02d] SERVER: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
+                }
+            }
+        }
+
+        free(user_input);
+    } while (len - 1 > 1);
 
     return EXIT_SUCCESS;
 }

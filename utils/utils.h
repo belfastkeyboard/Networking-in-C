@@ -9,7 +9,7 @@
 
 #include "status.h"
 
-#define PORT 80 // 54000
+#define PORT 54000
 #define BUFFER_LEN 4096
 #define WSA_SUCCESS 0
 #define RECV_FLAG 0
@@ -30,7 +30,7 @@ STATUS NetworkConnect(SOCKET sockfd, struct sockaddr_in* addr);
 STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* recv);
 
 STATUS NetworkServerReceive(SOCKET sockfd);
-STATUS NetworkSend();
+STATUS NetworkClientSend(SOCKET sockfd);
 
 void NetworkConstructSockaddr_in(struct sockaddr_in* addr, short fam, u_short port, u_long S_addr);
 

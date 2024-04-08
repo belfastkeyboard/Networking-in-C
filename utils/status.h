@@ -9,6 +9,4 @@
 #define info(msg, ...) printf("[i] " msg "\n", __VA_ARGS__)
 #define warn(msg, ...) printf("[!] " msg "\n", __VA_ARGS__)
 
-#define test vprintf
-
 #endif

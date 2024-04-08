@@ -10,9 +10,6 @@
 
 int main(void)
 {
-    warn("Test!", 0);
-    return 0;
-
     WSADATA data;
     SOCKET sock_listening, sock_client;
     struct sockaddr_in addr, addr_client;
