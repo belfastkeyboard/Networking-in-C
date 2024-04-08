@@ -35,11 +35,8 @@ int main(void)
 
     // While loop: accept and echo message back to client
 
-    while (TRUE) 
-    {
-        if (NetworkServerReceive(sock_client))
-            break;
-    }
+    if (NetworkServerReceive(sock_client))
+        return EXIT_FAILURE;
 
     // Close socket
     if (NetworkCloseSocket(sock_client))

@@ -193,42 +193,45 @@ STATUS NetworkServerReceive(SOCKET sockfd)
     time_t current_time;
     struct tm *local_time;
 
-    memset(buffer, 0, BUFFER_LEN);
-
-    bytes_rcvd = recv(sockfd, buffer, BUFFER_LEN, RECV_FLAG);
-    
-    time(&current_time);
-    local_time = localtime(&current_time);
-
-    printf("[%02d:%02d:%02d] Message received: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
-
-    if (bytes_rcvd == SOCKET_ERROR)
+    while (TRUE)
     {
-        warn("Error in recv(). Exiting.", 0);
-        return EXIT_FAILURE;
-    }
-    else if (bytes_rcvd == 0)
-    {
-        info("Client disconnected!", 0);
-        return EXIT_FAILURE;
-    }
-    else
-    {
-        // send message back to the client - think echo command
-        bytes_sent = send(sockfd, buffer, bytes_rcvd + 1, SEND_FLAG);
+        memset(buffer, 0, BUFFER_LEN);
 
+        bytes_rcvd = recv(sockfd, buffer, BUFFER_LEN, RECV_FLAG);
+        
         time(&current_time);
         local_time = localtime(&current_time);
 
-        if (bytes_sent == SOCKET_ERROR)
+        printf("[%02d:%02d:%02d] Message received: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
+
+        if (bytes_rcvd == SOCKET_ERROR)
         {
-            error = WSAGetLastError();
-            PrintWSAErrorMessage(error);
+            warn("Error in recv(). Exiting.", 0);
             return EXIT_FAILURE;
+        }
+        else if (bytes_rcvd == 0)
+        {
+            info("Client disconnected!", 0);
+            return EXIT_SUCCESS;
         }
         else
         {
-            printf("[%02d:%02d:%02d] Message sent: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
+            // send message back to the client - think echo command
+            bytes_sent = send(sockfd, buffer, bytes_rcvd + 1, SEND_FLAG);
+
+            time(&current_time);
+            local_time = localtime(&current_time);
+
+            if (bytes_sent == SOCKET_ERROR)
+            {
+                error = WSAGetLastError();
+                PrintWSAErrorMessage(error);
+                return EXIT_FAILURE;
+            }
+            else
+            {
+                printf("[%02d:%02d:%02d] Message sent: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
+            }
         }
     }
 
@@ -306,7 +309,122 @@ STATUS NetworkClientSend(SOCKET sockfd)
     return EXIT_SUCCESS;
 }
 
-void NetworkConstructSockaddr_in(struct sockaddr_in* addr, short fam, u_short port, u_long S_addr)
+DWORD WINAPI NetworkThreadClientSend(LPVOID lpParam)
+{
+    SOCKET sockfd;
+    char* user_input;
+    size_t len, size;
+    int bytes_sent, error;
+
+    sockfd = *(SOCKET*)lpParam;
+
+    // Do-while loop to send-receive data
+    do {
+        user_input = NULL;
+        size = 0;
+        len = 0;
+        
+        printf("> ");
+        len = getline(&user_input, &size, stdin);
+
+        if (len - 1 > 0)
+        {
+            bytes_sent = send(sockfd, user_input, len, SEND_FLAG);
+
+            if (bytes_sent == SOCKET_ERROR)
+            {
+                warn("Error sending.", 0);
+                error = WSAGetLastError();
+                PrintWSAErrorMessage(error);
+                return EXIT_FAILURE;
+            }
+        }
+
+        free(user_input);
+    } while (len - 1 > 1);
+
+    return EXIT_SUCCESS;
+}
+DWORD WINAPI NetworkThreadClientReceive(LPVOID lpParam)
+{
+    SOCKET sockfd;
+    char buffer[BUFFER_LEN];
+    int bytes_rcvd;
+    time_t current_time;
+    struct tm *local_time;
+
+    sockfd = *(SOCKET*)lpParam;
+
+    while (TRUE)
+    {
+        memset(buffer, 0, BUFFER_LEN);
+
+        bytes_rcvd = recv(sockfd, buffer, BUFFER_LEN, RECV_FLAG);
+        
+        time(&current_time);
+        local_time = localtime(&current_time);
+
+        if (bytes_rcvd == SOCKET_ERROR)
+        {
+            warn("Error in recv(). Exiting.", 0);
+            return EXIT_FAILURE;
+        }
+        else if (bytes_rcvd == 0)
+        {
+            info("Server disconnected?", 0);
+            return EXIT_SUCCESS;
+        }
+        else
+        {
+            printf("[%02d:%02d:%02d] Message received: %s", local_time->tm_hour, local_time->tm_min, local_time->tm_sec, buffer);
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+STATUS NetworkClientSendReceive(SOCKET sockfd)
+{
+    HANDLE HANDLES[2];
+    HANDLE sendHANDLE, receiveHANDLE;
+    LPVOID sendARGS, receiveARGS;
+    DWORD sendID, receiveID;
+
+    sendARGS = (LPVOID)&sockfd;
+    receiveARGS = (LPVOID)&sockfd;
+
+    sendHANDLE = CreateThread(THREAD_NO_SECURITY_ATTRS, THREAD_MEM_SIZE, NetworkThreadClientSend, sendARGS, THREAD_START_NO_DELAY, &sendID);
+
+    if (sendHANDLE == NULL)
+    {
+        warn("Thread '%lu' creation failed!", sendID);
+        return EXIT_FAILURE;
+    }
+    // else
+    // {
+    //     good("Thread '%lu' created!", sendID);
+    // }
+
+    receiveHANDLE = CreateThread(THREAD_NO_SECURITY_ATTRS, THREAD_MEM_SIZE, NetworkThreadClientReceive, receiveARGS, THREAD_START_NO_DELAY, &receiveID);
+
+    if (receiveHANDLE == NULL)
+    {
+        warn("Thread '%lu' creation failed!", receiveID);
+        return EXIT_FAILURE;
+    }
+    // else
+    // {
+    //     good("Thread '%lu' created!", receiveID);
+    // }
+
+    HANDLES[0] = sendHANDLE;
+    HANDLES[1] = receiveHANDLE;
+    WaitForMultipleObjects(2, HANDLES, THREAD_WAIT_FOR_ALL, INFINITE);
+
+    return EXIT_SUCCESS;
+}
+
+void NetworkConstructSockaddr_in(struct sockaddr_in *addr, short fam, u_short port, u_long S_addr)
 {
     memset(addr, 0, sizeof(*addr));
     addr->sin_family = fam;
