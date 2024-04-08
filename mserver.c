@@ -39,6 +39,8 @@ int main(void)
 
         worker = master;
 
+        printf("Connections: %d.\n", master.fd_count);
+
         socket_count = select(DEPRECATED, &worker, NULL, NULL, NULL); // timeout ?
 
         for (int i = 0; i < socket_count; i++)
@@ -47,18 +49,22 @@ int main(void)
 
             if (sockfd == sock_listening)
             {
+                info("Incoming connection.", 0);
+                
                 SOCKET client;
-                char welcome[21];
+                char welcome[22];
                 
                 // accept new connection
                 client = accept(sock_listening, NULL, NULL);
+
+                info("New user accepted.", 0);
 
                 // add connection to list of connected clients
                 FD_SET(client, &master);
 
                 // send welcome message to client
-                strcpy(welcome, "Welcome to the chat!");
-                int check = send(client, welcome, 21, SEND_FLAG);
+                strcpy(welcome, "Welcome to the chat!\n");
+                send(client, welcome, 22, SEND_FLAG);
 
                 // TODO: broadcast message to other clients welcoming new user
                 for (int j = 0; j < master.fd_count; j++)
@@ -77,6 +83,7 @@ int main(void)
             }
             else
             {
+                info("Incoming message.", 0);
                 // accept new message
                 char buffer[BUFFER_LEN];
                 int bytes_rcvd;
@@ -98,17 +105,15 @@ int main(void)
                     {
                         user = master.fd_array[i];
 
-                        if (user == user || user == sock_listening)
+                        if (user == sockfd || user == sock_listening)
                             continue;
 
                         send(user, buffer, bytes_rcvd, SEND_FLAG);
                     }
-
                 }
             }
         }
     }
-
 
     // Close socket
     if (NetworkCloseSocket(sock_client))

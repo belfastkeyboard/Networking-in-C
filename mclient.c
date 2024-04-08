@@ -25,9 +25,10 @@ int main(void)
         return EXIT_FAILURE;
 
     // how can client recv / send simultaneously?
+    NetworkClientSendReceive(sockfd);
 
-    if (NetworkClientSend(sockfd))
-        return EXIT_FAILURE;
+    // if (NetworkClientSend(sockfd))
+    //     return EXIT_FAILURE;
 
     // Shut down
     if (NetworkCloseSocket(sockfd))

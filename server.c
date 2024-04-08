@@ -10,9 +10,6 @@
 
 int main(void)
 {
-    warn("Test!", 0);
-    return 0;
-
     WSADATA data;
     SOCKET sock_listening, sock_client;
     struct sockaddr_in addr, addr_client;
@@ -44,11 +41,8 @@ int main(void)
 
     // While loop: accept and echo message back to client
 
-    while (TRUE) 
-    {
-        if (NetworkServerReceive(sock_client))
-            break;
-    }
+    if (NetworkServerReceive(sock_client))
+        return EXIT_FAILURE;
 
     // Close socket
     if (NetworkCloseSocket(sock_client))

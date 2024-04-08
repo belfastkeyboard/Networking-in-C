@@ -9,11 +9,19 @@
 
 #include "status.h"
 
-#define PORT 80 // 54000
+#define PORT 54000
+#define ZERO 0
 #define BUFFER_LEN 4096
-#define WSA_SUCCESS 0
-#define RECV_FLAG 0
+
+#define WSA_SUCCESS ZERO
+#define RECV_FLAG ZERO
 #define SEND_FLAG RECV_FLAG
+
+#define THREAD_MEM_SIZE ZERO
+#define THREAD_START_NO_DELAY ZERO
+#define THREAD_NO_SECURITY_ATTRS NULL
+#define THREAD_NO_ID NULL
+#define THREAD_WAIT_FOR_ALL TRUE
 
 typedef int STATUS;
 
@@ -30,7 +38,10 @@ STATUS NetworkConnect(SOCKET sockfd, struct sockaddr_in* addr);
 STATUS NetworkWaitForConnection(struct sockaddr_in* addr, SOCKET serv, SOCKET* recv);
 
 STATUS NetworkServerReceive(SOCKET sockfd);
-STATUS NetworkSend();
+STATUS NetworkClientSend(SOCKET sockfd);
+
+// threaded functions
+STATUS NetworkClientSendReceive(SOCKET sockfd);
 
 void NetworkConstructSockaddr_in(struct sockaddr_in* addr, short fam, u_short port, u_long S_addr);
 
