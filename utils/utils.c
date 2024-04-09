@@ -556,34 +556,5 @@ void NetworkConstructSockaddr_in(struct sockaddr_in *addr, short fam, u_short po
     memset(addr, 0, sizeof(*addr));
     addr->sin_family = fam;
     addr->sin_port = htons(port);
-    addr->sin_addr.S_un.S_addr = S_addr;
-}
-
-STATUS CreateUDPSocket(SOCKET* sockfd)
-{
-    *sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-    if (*sockfd == INVALID_SOCKET)
-    {
-        warn("Socket creation failed!", 0);
-        PrintWSAErrorMessage(WSAGetLastError());
-        return EXIT_FAILURE;
-    }
-    
-    return EXIT_SUCCESS;
-}
-
-void GetIPAddr(char* ipaddr)
-{
-        char hostname[256];
-        struct hostent* host;
-        struct in_addr addr;
-
-        gethostname(hostname, sizeof(hostname));
-
-        host = gethostbyname(hostname);
-
-        memcpy(&addr, host->h_addr_list[0], host->h_length);
-
-        strcpy(ipaddr, inet_ntoa(addr));
+    addr->sin_addr.S_un.S_addr = htonl(S_addr);
 }
